@@ -3,7 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Księgozbiory - Katalog Polecanych Książek</title>
+    <title>Weź przeczytaj - Katalog Polecanych Książek</title>
+    <!-- Google Analytics -->
+    <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-K215K2HJMH"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-K215K2HJMH');
+</script>
     <style>
         :root {
             --bg-primary: #1a1a1a;
@@ -249,7 +259,7 @@
 <body>
     <header>
         <div class="container">
-            <h1>Księgozbiory</h1>
+            <h1>Weź przeczytaj</h1>
             <p class="subtitle">Katalog książek polecanych przez wyjątkowych ludzi</p>
         </div>
     </header>
@@ -271,8 +281,8 @@
     </main>
     
     <footer>
-        <p>&copy; 2025 Księgozbiory | Katalog Polecanych Książek</p>
-        <p class="affiliate-info">Linki do zakupu książek to linki afiliacyjne z których korzyści czerpią bibliotekarze. Jeśli chcesz zostać bibliotekarzem i dodawać własne afiliacyjne linki napisz na ksiegozbiory@creyn.pl</p>
+        <p>&copy; 2025 Weź przeczytaj | Katalog Polecanych Książek</p>
+        <p class="affiliate-info">Linki do zakupu książek to linki afiliacyjne z których korzyści czerpią bibliotekarze. Jeśli chcesz zostać bibliotekarzem i dodawać własne afiliacyjne linki napisz na kontakt@wezprzeczytaj.pl</p>
     </footer>
     
     <style>
@@ -531,6 +541,30 @@
   }
 
         ];
+
+        
+        // Funkcje pomocnicze
+        // Funkcja debounce - zapobiega zbyt częstemu wywoływaniu funkcji
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+        
+        // Funkcja do śledzenia kliknięć w linki zakupowe
+        function trackAffiliateClick(bookTitle, linkTitle) {
+            gtag('event', 'affiliate_link_click', {
+                'event_category': 'Affiliate Links',
+                'event_label': `${bookTitle} - ${linkTitle}`,
+                'value': 1
+            });
+        }
         
         // Funkcja renderująca książki
         function renderBooks(booksToRender) {
@@ -563,7 +597,8 @@
                         </div>
                         <div class="book-links">
                             ${book.links.map(link => `
-                                <a href="${link.url}" class="book-link" target="_blank">${link.title}</a>
+                                <a href="${link.url}" class="book-link" target="_blank" 
+                                   onclick="trackAffiliateClick('${book.title.replace(/'/g, "\\'")}', '${link.title.replace(/'/g, "\\'")}'); return true;">${link.title}</a>
                             `).join('')}
                         </div>
                     </div>
@@ -617,10 +652,24 @@
                     button.classList.remove('active');
                 }
             });
+            
+            // Aktualizacja parametru URL dla wyszukiwania
+            if (query) {
+                const newUrl = new URL(window.location);
+                newUrl.searchParams.set('q', query);
+                window.history.pushState({}, '', newUrl);
+            } else {
+                const newUrl = new URL(window.location);
+                newUrl.searchParams.delete('q');
+                window.history.pushState({}, '', newUrl);
+            }
         }
         
+        // Zastosowanie debounce do wyszukiwania - opóźnienie 300ms
+        const debouncedSearch = debounce(performSearch, 300);
+        
         // Wyszukiwanie na bieżąco podczas pisania
-        searchInput.addEventListener('input', performSearch);
+        searchInput.addEventListener('input', debouncedSearch);
         
         // Przycisk "Wyczyść"
         searchButton.addEventListener('click', () => {
@@ -656,21 +705,17 @@
                 // Wyczyść pole wyszukiwania
                 searchInput.value = '';
                 
+                // Aktualizacja URL, usunięcie parametru wyszukiwania
+                const newUrl = new URL(window.location);
+                newUrl.searchParams.delete('q');
+                window.history.pushState({}, '', newUrl);
+                
                 // Renderuj przefiltrowane książki
                 renderBooks(filteredBooks);
             }
         });
         
-        // Inicjalizacja - pokaż wszystkie książki na starcie
-        document.addEventListener('DOMContentLoaded', () => {
-            // Generuj przyciski filtrujące
-            generateFilterButtons();
-            
-            // Renderuj książki
-            renderBooks(books);
-        });
-		
-		// Funkcja generująca przyciski filtrujące
+        // Funkcja generująca przyciski filtrujące
         function generateFilterButtons() {
             const filterButtonsContainer = document.getElementById('filter-buttons');
             filterButtonsContainer.innerHTML = '';
@@ -694,6 +739,31 @@
                 filterButtonsContainer.appendChild(button);
             });
         }
+        
+        // Obsługa parametrów URL i ładowanie danych z URL
+        function loadFromUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const queryParam = urlParams.get('q');
+            
+            if (queryParam) {
+                searchInput.value = queryParam;
+                performSearch();
+            }
+        }
+        
+        // Inicjalizacja - pokaż wszystkie książki na starcie
+        document.addEventListener('DOMContentLoaded', () => {
+            // Generuj przyciski filtrujące
+            generateFilterButtons();
+            
+            // Sprawdź czy istnieją parametry URL do wyszukiwania
+            loadFromUrlParams();
+            
+            // Jeśli nie ma parametrów URL, renderuj wszystkie książki
+            if (!searchInput.value) {
+                renderBooks(books);
+            }
+        });
     </script>
 </body>
 </html>
